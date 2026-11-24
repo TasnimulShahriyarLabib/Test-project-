@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ReelGuard</string>
+    <string name="service_description">Detects Reels, Shorts and Spotlight screens in selected apps and sends you back or home. It only looks at those apps and does not store or send any screen content.</string>
+</resources>
