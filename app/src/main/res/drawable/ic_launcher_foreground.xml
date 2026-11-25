@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- White shield -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 L76,36 L76,54 C76,67 66,75 54,80 C42,75 32,67 32,54 L32,36 Z" />
+
+    <!-- Play triangle -->
+    <path
+        android:fillColor="#5B5BD6"
+        android:pathData="M47,44 L47,64 L64,54 Z" />
+
+    <!-- Red "blocked" slash -->
+    <path
+        android:pathData="M38,38 L70,72"
+        android:strokeColor="#E5484D"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+</vector>

@@ -20,7 +20,7 @@ class BlockerService : AccessibilityService() {
 
         if (rule.blockWholeApp) {
             if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-                block(rule, forceHome = true)
+                block(rule, true, null)
             }
             return
         }
@@ -29,7 +29,7 @@ class BlockerService : AccessibilityService() {
         if (root.packageName?.toString() != pkg) return
 
         if (scan(root, rule, Prefs.captureOn(this))) {
-            block(rule, forceHome = false)
+            block(rule, false, root)
         }
     }
 
@@ -55,6 +55,11 @@ class BlockerService : AccessibilityService() {
                 }
             }
 
+            if (capture && node.isVisibleToUser) {
+                val d = node.contentDescription?.toString()
+                if (!d.isNullOrBlank()) record(rule, "desc=" + d.take(50))
+            }
+
             if (node.isSelected) {
                 val label = (node.contentDescription ?: node.text)?.toString()
                 if (label != null) {
@@ -75,16 +80,49 @@ class BlockerService : AccessibilityService() {
         return found
     }
 
-    private fun block(rule: AppRule, forceHome: Boolean) {
+    /**
+     * Taps the "Home" tab of the app. Unlike Back/Home buttons this does not leave the app,
+     * so YouTube cannot shrink the Short into a floating picture-in-picture window.
+     */
+    private fun clickHomeTab(root: AccessibilityNodeInfo): Boolean {
+        val hits = root.findAccessibilityNodeInfosByText("Home") ?: return false
+        for (n in hits) {
+            val label = (n.contentDescription ?: n.text)?.toString() ?: continue
+            if (!label.startsWith("Home", ignoreCase = true)) continue
+
+            var target: AccessibilityNodeInfo? = n
+            var depth = 0
+            while (target != null && !target.isClickable && depth < 4) {
+                target = target.parent
+                depth++
+            }
+            if (target != null && target.isClickable &&
+                target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            ) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun block(rule: AppRule, forceHome: Boolean, root: AccessibilityNodeInfo?) {
         val now = SystemClock.elapsedRealtime()
         if (now - lastBlockAt < 800) return
 
         strikes = if (now - lastBlockAt < 4000) strikes + 1 else 1
         lastBlockAt = now
 
-        // First try Back; if the feed is still there right after, go Home.
-        val goHome = forceHome || strikes >= 2
-        performGlobalAction(if (goHome) GLOBAL_ACTION_HOME else GLOBAL_ACTION_BACK)
+        if (forceHome) {
+            performGlobalAction(GLOBAL_ACTION_HOME)
+        } else if (strikes == 1) {
+            // 1st try: tap the app's Home tab; if it is not there, press Back.
+            val tapped = root != null && clickHomeTab(root)
+            if (!tapped) performGlobalAction(GLOBAL_ACTION_BACK)
+        } else if (strikes == 2) {
+            performGlobalAction(GLOBAL_ACTION_BACK)
+        } else {
+            performGlobalAction(GLOBAL_ACTION_HOME)
+        }
 
         Prefs.addBlocked(this)
         Toast.makeText(this, rule.name + " blocked", Toast.LENGTH_SHORT).show()
